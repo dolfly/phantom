@@ -21,12 +21,12 @@ canvas.load(function() {
 
 				if ((x + y) % 2) {
 
-					canvas.addObject('img/house.png', x, y);
+					canvas.createObject('img/house.png', x, y);
 				}
 			}
 			else if ((x % 4) == 0) {
 				
-				canvas.addObject('img/road.png', x, y);
+				canvas.createObject('img/road.png', x, y);
 			}
 		}
 	}
