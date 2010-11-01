@@ -1,24 +1,35 @@
 /**
- * Phantom 0.0.1 - JavaScript Isometric Game Engine
+ * Phantom 0.0.2 - JavaScript Isometric Game Engine
  *
  * Copyright (c) 2010 Oliver Morgan (http://github.com/ollym)
  * Licensed under the MIT (http://raphaeljs.com/license.html) license.
  */
 (function() {
 	
-	window.Phantom = function Phantom(canvas, background, size, width, height) {
+	window.Phantom = function Phantom(canvas, background, size, tileWidth, tileHeight) {
 		
-		background = new Phantom.Object(background);
+		if ( ! (this instanceof Phantom)) {
+			
+			return new Phantom(canvas, background, size, tileWidth, tileHeight);
+		}
 		
-		this.size = size;
-		this.width = width;
-		this.height = height;
-		this.canvas = Raphael(canvas, size * width, size * height);
+		if ( ! (background instanceof Image)) {
+			
+			var src = background;
+			background = new Image();
+			background.src = src;
+		}
+		
+		this.size = size || 50;
+		this.tileWidth = tileWidth || 160;
+		this.tileHeight = tileHeight || 90;
+		
+		this.canvas = Raphael(canvas, size * tileWidth, size * tileHeight);
 		this.tiles = [];
 		
 		var self = this;
 		
-		background.load(function() {
+		background.onload = function() {
 			
 			for (var x = 0; x < size; x++) {
 				
@@ -27,87 +38,32 @@
 				for (var y = 0; y < size; y++) {
 					
 					self.tiles[x][y] = [];
-					self.addObject(background, x, y);
+					
+					var obj = self.createObject(background, x, y);
+					
+					(function(a, b, c) {
+						
+						a.element.click(function() {
+							
+							self.onclick(b, c)
+						});
+						
+					})(obj, x, y)
 				}
 			}
 			
 			self.onload();
 			self.loaded = true;
-		});
+		};
+		
+		if (background.complete) {
+			
+			background.onload();
+		}
 	}
 	
 	Phantom.version = '0.0.1';
 	
-	Phantom.createObject = function(sprite, width, height) {
-		
-		return new Phantom.Object(sprite, width, height);
-	}
-	
-	Phantom.Object = function(sprite, width, height) {
-		
-		if (width == undefined || height == undefined) {
-			
-			if (typeof sprite === 'string') {
-				
-				var src = sprite;
-
-				sprite = new Image();
-				sprite.src = src;
-			}
-
-			if (sprite instanceof Image) {
-
-				if ( ! sprite.complete) {
-
-					(function(image, object, width, height) {
-
-						image.onload = function() {
-
-							object.width = width || image.width;
-							object.height = height || image.height;
-							object.loaded = true;
-
-							object.onload();
-							object
-						}
-
-					})(sprite, this, width, height);
-				}
-				else {
-
-					this.width = width || sprite.width;
-					this.height = height || sprite.height;
-					this.loaded = true;
-
-					this.onload();
-				}
-			}
-			
-			this.src = sprite.src;
-		}
-		else {
-			
-			this.src = sprite;
-		}
-	}
-
-	Phantom.Object.prototype = {
-		
-		loaded: false,
-
-		onload: function() { },
-		
-		load: function(callback) {
-			
-			this.onload = callback;
-			
-			if (this.loaded) {
-				
-				callback();
-			}
-		}
-	}
-
 	Phantom.prototype = {
 		
 		loaded: false,
@@ -124,23 +80,71 @@
 			}
 		},
 		
-		addObject: function(object, x, y) {
+		createObject: function(image, x, y) {
 			
-			if ( ! (object instanceof Phantom.Object)) {
+			var obj = this.tiles[x][y] = new Phantom.Object(this, image, x, y);
+			
+			return obj;
+		}
+	}
+	
+	Phantom.Object = function(container, src, x, y) {
+		
+		if ( ! (this instanceof Phantom.Object)) {
+			
+			return new Phantom.Object(container, src, x, y);
+		}
+		
+		this.container = container;
+		
+		var self = this;
+		
+		function onload() {
+			
+			self.element = container.canvas.image(image.src);
+			self.attr('width', image.width);
+			self.attr('height', image.height);
+			self.element.attr('x', self.cartToIsoX(x, y));
+			self.element.attr('y', self.cartToIsoY(y, x));
+		}
+		
+		if ( ! (src instanceof Image)) {
+			
+			var image = new Image();
+			image.onload = onload;
+			image.src = src;
+		}
+		else {
+			
+			var image = src;
+			
+			image.onload = onload;
+			
+			if (image.complete) {
 				
-				object = Phantom.createObject(object);
+				image.onload();
 			}
-			
-			var self = this;
-			
-			object.load(function() {
-				
-				xpos = (self.width  / 2) * (x - y + self.size) - ((object.width - self.width) / 2);
-				ypos = (self.height / 2) * (x + y) - (object.height - self.height);
+		}
+	}
 
-				object = self.canvas.image(object.src, xpos, ypos, object.width, object.height);
-				self.tiles[x][y].push(object);
-			});
+	Phantom.Object.prototype = {
+		
+		cartToIsoX: function(xpos, ypos) {
+			return (this.container.tileWidth  / 2) * (xpos - ypos + (this.container.size - 1)) - ((this.attr('width') - this.container.tileWidth) / 2);
+		},
+		
+		cartToIsoY: function(ypos, xpos) {
+			return (this.container.tileHeight / 2) * (xpos + ypos) - (this.attr('height') - this.container.tileHeight);
+		},
+		
+		attr: function(name, value) {
+			
+			switch (name) {
+				
+				case 'x': return (value === undefined) ? this.x : this.element.attr('x', this.cartToIsoX(this.x = value, this.attr('y')));
+				case 'y': return (value === undefined) ? this.y : this.element.attr('y', this.cartToIsoY(this.y = value, this.attr('x')));
+				default: return this.element.attr(name, value);
+			}
 		}
 	}
 })();

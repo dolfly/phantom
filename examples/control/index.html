@@ -2,6 +2,7 @@
 	<head>
 		<script src="../../lib/raphael/raphael-min.js" type="text/javascript"></script>
 		<script src="../../src/phantom.js" type="text/javascript"></script>
+		<script src="../../src/fx/moveTo.js" type="text/javascript"></script>
 	</head>
 	<body>
 		<div id="canvas"></div>
@@ -13,22 +14,11 @@ var canvas = new Phantom(document.getElementById('canvas'), 'img/grass.png', 50,
 
 canvas.load(function() {
 	
-	for (var x = 0; x < 50; x++) {
-
-		for (var y = 0; y < 50; y++) {
-
-			if ((x * y) % 4) {
-
-				if ((x + y) % 2) {
-
-					canvas.createObject('img/house.png', x, y);
-				}
-			}
-			else if ((x % 4) == 0) {
-				
-				canvas.createObject('img/road.png', x, y);
-			}
-		}
-	}
-});
+	var obj = canvas.createObject('img/box.png', 25, 25);
+	
+	canvas.onclick = function(x, y) {
+		
+		obj.moveTo(x, y, 2000, 'elastic');
+	};
+})
 </script>
